@@ -15,7 +15,7 @@ from moto.moto_api._internal import mock_random as random
 from moto.utilities.paginator import paginate
 from moto.utilities.utils import get_partition, load_resource, md5_hash
 
-from ..settings import get_cognito_idp_user_pool_id_strategy
+from ..settings import get_cognito_idp_user_pool_id_strategy, get_cognito_idp_client_id_strategy
 from .exceptions import (
     AliasExistsException,
     ExpiredCodeException,
@@ -712,7 +712,12 @@ class CognitoIdpUserPoolClient(BaseModel):
         extended_config: Optional[Dict[str, Any]],
     ):
         self.user_pool_id = user_pool_id
-        self.id = create_id()
+        ## TODO(tacogips) hash
+        #self.id = create_id()
+        self.id = generate_id(
+            get_cognito_idp_client_id_strategy(), user_pool_id, extended_config
+        )
+
         self.secret = str(random.uuid4())
         self.generate_secret = generate_secret or False
         # Some default values - may be overridden by the user
@@ -724,6 +729,7 @@ class CognitoIdpUserPoolClient(BaseModel):
             "RefreshTokenValidity": 30,
         }
         self.extended_config.update(extended_config or {})
+
 
     def _base_json(self) -> Dict[str, Any]:
         return {
