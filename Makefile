@@ -62,3 +62,8 @@ scaffold:
 
 int_test:
 	@./scripts/int_test.sh
+
+push_container:
+	docker build -t moto-custom .
+	docker tag moto-custom tacogips/moto-custom:latest
+	docker push tacogips/moto-custom:latest

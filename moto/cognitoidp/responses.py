@@ -1,5 +1,6 @@
 import json
 from typing import Any, Dict
+import os
 
 from moto.core.responses import TYPE_RESPONSE, BaseResponse
 from moto.utilities.utils import load_resource
@@ -338,7 +339,7 @@ class CognitoIdpResponse(BaseResponse):
         message_action = self._get_param("MessageAction")
         temporary_password = self._get_param("TemporaryPassword")
         if temporary_password is None:
-            temporary_password  = "temp_moto_password_123"
+            temporary_password = os.getenv("DEFAULT_ADMIN_CREATE_USER_TEMP_PASSWORD", "user_temp_pass_112233")
         user = self.backend.admin_create_user(
             user_pool_id,
             username,
