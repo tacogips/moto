@@ -337,6 +337,8 @@ class CognitoIdpResponse(BaseResponse):
         username = self._get_param("Username")
         message_action = self._get_param("MessageAction")
         temporary_password = self._get_param("TemporaryPassword")
+        if temporary_password is None:
+            temporary_password  = "temp_moto_password_123"
         user = self.backend.admin_create_user(
             user_pool_id,
             username,
