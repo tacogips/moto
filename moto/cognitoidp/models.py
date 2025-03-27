@@ -2089,7 +2089,10 @@ class CognitoIdpBackend(BaseBackend):
             if user.status is UserStatus.FORCE_CHANGE_PASSWORD:
                 return {
                     "ChallengeName": "NEW_PASSWORD_REQUIRED",
-                    "ChallengeParameters": {"USERNAME": user.username},
+                    "ChallengeParameters": {"USERNAME": user.username,
+                        "userAttributes": user.attributes,
+                        "rawRequiredAttributes" : {}
+                    },
                     "Session": session,
                 }
 
