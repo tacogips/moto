@@ -1,4 +1,4 @@
-SHELL := /bin/bash
+SHELL := /run/current-system/sw/bin/bash
 
 SERVICE_NAME = "default"
 TEST_NAMES = "*"

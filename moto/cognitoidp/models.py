@@ -1667,6 +1667,8 @@ class CognitoIdpBackend(BaseBackend):
                     "ChallengeName": "NEW_PASSWORD_REQUIRED",
                     "ChallengeParameters": {
                         "USERNAME": username,
+                        "userAttributes": user.attributes,
+                        "rawRequiredAttributes" : {}
                     },
                     "Session": session,
                 }
