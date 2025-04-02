@@ -42,6 +42,10 @@ from .utils import (
     validate_username_format,
 )
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class UserStatus(str, enum.Enum):
     FORCE_CHANGE_PASSWORD = "FORCE_CHANGE_PASSWORD"
@@ -1605,24 +1609,33 @@ class CognitoIdpBackend(BaseBackend):
         challenge_name: str,
         challenge_responses: Dict[str, str],
     ) -> Dict[str, Any]:
+        print("====== debugging: start respond_to_auth_challenge")
         if challenge_name == "PASSWORD_VERIFIER":
             session = challenge_responses.get("PASSWORD_CLAIM_SECRET_BLOCK")  # type: ignore[assignment]
 
+        print("====== debugging: start validate session", session)
         if session not in self.sessions:
             raise ResourceNotFoundError(session)
         _, user_pool = self.sessions[session]
 
+        print("====== debugging: getting client", client_id)
         client = user_pool.clients.get(client_id)
         if not client:
             raise ResourceNotFoundError(client_id)
 
+        print("====== debugging: start challenging")
         if challenge_name == "NEW_PASSWORD_REQUIRED":
             username: str = challenge_responses.get("USERNAME")  # type: ignore[assignment]
             new_password = challenge_responses.get("NEW_PASSWORD")
             if not new_password:
                 raise InvalidPasswordException()
+
+            print("====== debugging: start validate password")
             self._validate_password(user_pool.id, new_password)
+            print("====== debugging: getting user", user_pool.id, username)
             user = self.admin_get_user(user_pool.id, username)
+
+            print("====== debugging: fetched user", user)
 
             user.password = new_password
             user.status = UserStatus.CONFIRMED
@@ -1671,7 +1684,7 @@ class CognitoIdpBackend(BaseBackend):
                     "ChallengeParameters": {
                         "USERNAME": username,
                         "userAttributes": json.dumps(user.attributes),
-                        "rawRequiredAttributes": json.dumps({}),
+                        "requiredAttributes": json.dumps([]),
                     },
                     "Session": session,
                 }
@@ -2072,7 +2085,10 @@ class CognitoIdpBackend(BaseBackend):
             username: str = auth_parameters.get("USERNAME")  # type: ignore[no-redef]
             password: str = auth_parameters.get("PASSWORD")  # type: ignore[assignment]
 
+            print("====== debugging: start getting user")
             user = self.admin_get_user(user_pool.id, username)
+
+            print("====== debugging: fetced user id", user.id, user_pool.id)
 
             if not user:
                 raise UserNotFoundError(username)
@@ -2095,7 +2111,7 @@ class CognitoIdpBackend(BaseBackend):
                     "ChallengeParameters": {
                         "USERNAME": user.username,
                         "userAttributes": json.dumps(user.attributes),
-                        "rawRequiredAttributes": json.dumps({}),
+                        "requiredAttributes": json.dumps([]),
                     },
                     "Session": session,
                 }
