@@ -464,6 +464,10 @@ class CognitoIdpUserPool(BaseModel):
         )
 
     def update_extended_config(self, extended_config: Dict[str, Any]) -> None:
+        print(
+            "===== debugging in update_extended_config extended_config:",
+            extended_config,
+        )
         self.extended_config = DEFAULT_USER_POOL_CONFIG.copy()
         self.extended_config.update(extended_config or {})
 
@@ -515,9 +519,22 @@ class CognitoIdpUserPool(BaseModel):
     def _get_user(self, username: str) -> "CognitoIdpUser":
         """Find a user within a user pool by Username or any UsernameAttributes
         (`email` or `phone_number` or both)"""
+        print(
+            "===== debugging in get_user username attributes:",
+            self.extended_config.get("UsernameAttributes"),
+        )
         if self.extended_config.get("UsernameAttributes"):
             attribute_types = self.extended_config["UsernameAttributes"]
+            print("===== debugging in attribute_types :", attribute_types)
+
             for user in self.users.values():
+                print(
+                    "===== debugging in checking user attributes:",
+                    user.id,
+                    user.attributes,
+                    attribute_types,
+                )
+
                 if username in [
                     flatten_attrs(user.attributes).get(attribute_type)
                     for attribute_type in attribute_types
@@ -2085,10 +2102,10 @@ class CognitoIdpBackend(BaseBackend):
             username: str = auth_parameters.get("USERNAME")  # type: ignore[no-redef]
             password: str = auth_parameters.get("PASSWORD")  # type: ignore[assignment]
 
-            print("====== debugging: start getting user")
+            print("====== debugging: start getting user", username, user_pool.id)
             user = self.admin_get_user(user_pool.id, username)
 
-            print("====== debugging: fetced user id", user.id, user_pool.id)
+            print("====== debugging: fetched user id", user.id, user_pool.id)
 
             if not user:
                 raise UserNotFoundError(username)
