@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import json
 
 from joserfc import jwk, jwt
+import os
 
 from moto.core.base_backend import BackendDict, BaseBackend
 from moto.core.common_models import BaseModel
@@ -519,13 +520,26 @@ class CognitoIdpUserPool(BaseModel):
     def _get_user(self, username: str) -> "CognitoIdpUser":
         """Find a user within a user pool by Username or any UsernameAttributes
         (`email` or `phone_number` or both)"""
-        print(
-            "===== debugging in get_user username attributes:",
-            self.extended_config.get("UsernameAttributes"),
-        )
+
         if self.extended_config.get("UsernameAttributes"):
             attribute_types = self.extended_config["UsernameAttributes"]
-            print("===== debugging in attribute_types :", attribute_types)
+            for user in self.users.values():
+                print(
+                    "===== debugging in checking user attributes:",
+                    user.id,
+                    user.attributes,
+                    attribute_types,
+                )
+
+                if username in [
+                    flatten_attrs(user.attributes).get(attribute_type)
+                    for attribute_type in attribute_types
+                ]:
+                    return user
+
+        if self.extended_config.get("AliasAttributes"):
+            attribute_types = self.extended_config["AliasAttributes"]
+            print("===== debugging in alias attribute_types :", attribute_types)
 
             for user in self.users.values():
                 print(
@@ -552,14 +566,21 @@ class CognitoIdpUserPool(BaseModel):
         extra_data: Optional[Dict[str, Any]] = None,
     ) -> Tuple[str, int]:
         now = int(time.time())
+
+        iss_url = (
+            os.environ.get("MOTO_JWT_ISSUER_URL")
+            or f"https://cognito-idp.{self.region}.amazonaws.com"
+        )
+
         payload = {
-            "iss": f"https://cognito-idp.{self.region}.amazonaws.com/{self.id}",
+            "iss": f"{iss_url}/{self.id}",
             "sub": self._get_user(username).id,
             "client_id" if token_use == "access" else "aud": client_id,
             "token_use": token_use,
             "auth_time": now,
             "exp": now + expires_in,
             "jti": str(random.uuid4()),
+            "iat": now,
         }
         username_is_email = "email" in self.extended_config.get(
             "UsernameAttributes", []
@@ -1630,7 +1651,7 @@ class CognitoIdpBackend(BaseBackend):
         if challenge_name == "PASSWORD_VERIFIER":
             session = challenge_responses.get("PASSWORD_CLAIM_SECRET_BLOCK")  # type: ignore[assignment]
 
-        print("====== debugging: start validate session", session)
+        print("====== debugging: start validate session", session, self.sessions)
         if session not in self.sessions:
             raise ResourceNotFoundError(session)
         _, user_pool = self.sessions[session]
