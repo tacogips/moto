@@ -552,10 +552,12 @@ class CognitoIdpUserPool(BaseModel):
             os.environ.get("MOTO_JWT_ISSUER_URL")
             or f"https://cognito-idp.{self.region}.amazonaws.com"
         )
+        user = self._get_user(username)
 
+        email = flatten_attrs(user.attributes).get("email")
         payload = {
             "iss": f"{iss_url}/{self.id}",
-            "sub": self._get_user(username).id,
+            "sub": user.id,
             "client_id" if token_use == "access" else "aud": client_id,
             "token_use": token_use,
             "auth_time": now,
@@ -563,6 +565,7 @@ class CognitoIdpUserPool(BaseModel):
             "jti": str(random.uuid4()),
             "iat": now,
         }
+
         username_is_email = "email" in self.extended_config.get(
             "UsernameAttributes", []
         )
@@ -570,13 +573,16 @@ class CognitoIdpUserPool(BaseModel):
             if username_is_email:
                 payload["username"] = payload["sub"]
             else:
-                payload["username"] = username
+                payload["username"] = user.username
         if token_use == "id":
             if username_is_email:
                 payload["cognito:username"] = payload["sub"]
-                payload["email"] = username
+                payload["email"] = email
+                payload["email_verified"] = True
             else:
-                payload["cognito:username"] = username
+                payload["cognito:username"] = user.username
+                payload["email"] = email
+                payload["email_verified"] = True
 
         payload.update(extra_data or {})
         headers = {"kid": "dummy", "alg": "RS256"}  # KID as present in jwks-public.json

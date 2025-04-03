@@ -339,7 +339,9 @@ class CognitoIdpResponse(BaseResponse):
         message_action = self._get_param("MessageAction")
         temporary_password = self._get_param("TemporaryPassword")
         if temporary_password is None:
-            temporary_password = os.getenv("DEFAULT_ADMIN_CREATE_USER_TEMP_PASSWORD", "user_temp_pass_112233")
+            temporary_password = os.getenv(
+                "DEFAULT_ADMIN_CREATE_USER_TEMP_PASSWORD", "user_temp_pass_112233"
+            )
         user = self.backend.admin_create_user(
             user_pool_id,
             username,
@@ -437,6 +439,9 @@ class CognitoIdpResponse(BaseResponse):
         )
 
         return json.dumps(auth_result)
+
+    def revoke_token(self) -> str:
+        return json.dumps({"message": "not_implemented"})
 
     def forgot_password(self) -> str:
         client_id = self._get_param("ClientId")
