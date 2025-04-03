@@ -465,10 +465,6 @@ class CognitoIdpUserPool(BaseModel):
         )
 
     def update_extended_config(self, extended_config: Dict[str, Any]) -> None:
-        print(
-            "===== debugging in update_extended_config extended_config:",
-            extended_config,
-        )
         self.extended_config = DEFAULT_USER_POOL_CONFIG.copy()
         self.extended_config.update(extended_config or {})
 
@@ -524,13 +520,6 @@ class CognitoIdpUserPool(BaseModel):
         if self.extended_config.get("UsernameAttributes"):
             attribute_types = self.extended_config["UsernameAttributes"]
             for user in self.users.values():
-                print(
-                    "===== debugging in checking user attributes:",
-                    user.id,
-                    user.attributes,
-                    attribute_types,
-                )
-
                 if username in [
                     flatten_attrs(user.attributes).get(attribute_type)
                     for attribute_type in attribute_types
@@ -539,16 +528,8 @@ class CognitoIdpUserPool(BaseModel):
 
         if self.extended_config.get("AliasAttributes"):
             attribute_types = self.extended_config["AliasAttributes"]
-            print("===== debugging in alias attribute_types :", attribute_types)
 
             for user in self.users.values():
-                print(
-                    "===== debugging in checking user attributes:",
-                    user.id,
-                    user.attributes,
-                    attribute_types,
-                )
-
                 if username in [
                     flatten_attrs(user.attributes).get(attribute_type)
                     for attribute_type in attribute_types
@@ -562,7 +543,7 @@ class CognitoIdpUserPool(BaseModel):
         client_id: str,
         username: str,
         token_use: str,
-        expires_in: int = 60 * 60,
+        expires_in: int = 60 * 60 * 5,
         extra_data: Optional[Dict[str, Any]] = None,
     ) -> Tuple[str, int]:
         now = int(time.time())
@@ -1647,33 +1628,25 @@ class CognitoIdpBackend(BaseBackend):
         challenge_name: str,
         challenge_responses: Dict[str, str],
     ) -> Dict[str, Any]:
-        print("====== debugging: start respond_to_auth_challenge")
         if challenge_name == "PASSWORD_VERIFIER":
             session = challenge_responses.get("PASSWORD_CLAIM_SECRET_BLOCK")  # type: ignore[assignment]
 
-        print("====== debugging: start validate session", session, self.sessions)
         if session not in self.sessions:
             raise ResourceNotFoundError(session)
         _, user_pool = self.sessions[session]
 
-        print("====== debugging: getting client", client_id)
         client = user_pool.clients.get(client_id)
         if not client:
             raise ResourceNotFoundError(client_id)
 
-        print("====== debugging: start challenging")
         if challenge_name == "NEW_PASSWORD_REQUIRED":
             username: str = challenge_responses.get("USERNAME")  # type: ignore[assignment]
             new_password = challenge_responses.get("NEW_PASSWORD")
             if not new_password:
                 raise InvalidPasswordException()
 
-            print("====== debugging: start validate password")
             self._validate_password(user_pool.id, new_password)
-            print("====== debugging: getting user", user_pool.id, username)
             user = self.admin_get_user(user_pool.id, username)
-
-            print("====== debugging: fetched user", user)
 
             user.password = new_password
             user.status = UserStatus.CONFIRMED
@@ -2122,11 +2095,7 @@ class CognitoIdpBackend(BaseBackend):
         elif auth_flow is AuthFlow.USER_PASSWORD_AUTH:
             username: str = auth_parameters.get("USERNAME")  # type: ignore[no-redef]
             password: str = auth_parameters.get("PASSWORD")  # type: ignore[assignment]
-
-            print("====== debugging: start getting user", username, user_pool.id)
             user = self.admin_get_user(user_pool.id, username)
-
-            print("====== debugging: fetched user id", user.id, user_pool.id)
 
             if not user:
                 raise UserNotFoundError(username)
