@@ -64,6 +64,7 @@ int_test:
 	@./scripts/int_test.sh
 
 push_container:
-	docker build -t moto-custom .
-	docker tag moto-custom tacogips/moto-custom:latest
-	docker push tacogips/moto-custom:latest
+	docker buildx create --name mybuilder --use --bootstrap || true
+	docker buildx build --platform linux/amd64,linux/arm64 \
+		-t tacogips/moto-custom:latest \
+		--push .
