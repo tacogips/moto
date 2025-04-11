@@ -555,6 +555,7 @@ class CognitoIdpUserPool(BaseModel):
         user = self._get_user(username)
 
         email = flatten_attrs(user.attributes).get("email")
+        email_verified = flatten_attrs(user.attributes).get("email_verified") == "true"
         payload = {
             "iss": f"{iss_url}/{self.id}",
             "sub": user.id,
@@ -578,11 +579,11 @@ class CognitoIdpUserPool(BaseModel):
             if username_is_email:
                 payload["cognito:username"] = payload["sub"]
                 payload["email"] = email
-                payload["email_verified"] = True
+                payload["email_verified"] = email_verified
             else:
                 payload["cognito:username"] = user.username
                 payload["email"] = email
-                payload["email_verified"] = True
+                payload["email_verified"] = email_verified
 
         payload.update(extra_data or {})
         headers = {"kid": "dummy", "alg": "RS256"}  # KID as present in jwks-public.json
@@ -1329,6 +1330,11 @@ class CognitoIdpBackend(BaseBackend):
             self.admin_get_user(user_pool_id, username)
         elif user_pool._get_user(username):
             raise UsernameExistsException(username)
+
+        flattened_attrs = flatten_attrs(attributes)
+        if "email" in flattened_attrs and "email_verified" not in flattened_attrs:
+            flattened_attrs.update({"email_verified": "true"})
+        attributes = expand_attrs(flattened_attrs)
 
         # UsernameAttributes are attributes (either `email` or `phone_number`
         # or both) than can be used in the place of a unique username. If the
